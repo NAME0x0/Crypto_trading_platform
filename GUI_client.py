@@ -687,6 +687,143 @@ class CryptoTradingGUI(QMainWindow):
 
             self.portfolio_table.resizeColumnsToContents()
 
+    def check_balance(self):
+        """Fetch and display user balance"""
+        if not self.current_user:
+            self.show_error_message("Please login first.")
+            return
+    
+        response = self._make_request(f'/account/{self.current_user}')
+        if response:
+            balance = response.get('balance', 0)
+            self.balance_label.setText(f"Balance: ${balance:.2f}")
+
+    def deposit_funds(self):
+        """Handle fund deposit"""
+        if not self.current_user:
+            self.show_error_message("Please login first.")
+            return
+    
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Deposit Funds")
+        layout = QFormLayout()
+    
+        amount_input = QLineEdit()
+        layout.addRow("Amount:", amount_input)
+    
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        )
+        buttons.accepted.connect(dialog.accept)
+        buttons.rejected.connect(dialog.reject)
+        layout.addRow(buttons)
+    
+        dialog.setLayout(layout)
+    
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            try:
+                amount = float(amount_input.text())
+                data = {
+                    'username': self.current_user,
+                    'amount': amount
+                }
+            
+                response = self._make_request('/deposit', method='post', data=data)
+                if response:
+                    self.show_success_message(response.get('message', 'Deposit successful!'))
+                    self.check_balance()
+            except ValueError:
+                self.show_error_message("Invalid amount entered.")
+
+    def withdraw_funds(self):
+        """Handle fund withdrawal"""
+        if not self.current_user:
+            self.show_error_message("Please login first.")
+            return
+    
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Withdraw Funds")
+        layout = QFormLayout()
+    
+        amount_input = QLineEdit()
+        layout.addRow("Amount:", amount_input)
+    
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        )
+        buttons.accepted.connect(dialog.accept)
+        buttons.rejected.connect(dialog.reject)
+        layout.addRow(buttons)
+    
+        dialog.setLayout(layout)
+    
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            try:
+                amount = float(amount_input.text())
+                data = {
+                    'username': self.current_user,
+                    'amount': amount
+                }
+            
+                response = self._make_request('/withdraw', method='post', data=data)
+                if response:
+                    self.show_success_message(response.get('message', 'Withdrawal successful!'))
+                    self.check_balance()
+            except ValueError:
+                self.show_error_message("Invalid amount entered.")
+
+    def fetch_market_data(self):
+        """Fetch and display current market data"""
+        response = self._make_request('/market_data')
+        if response and isinstance(response, list):  # Check if response is a list
+            self.market_data = response
+            self.market_table.setRowCount(0)  # Clear existing data
+            self.buy_asset_combo.clear()     # Clear combo box options
+            self.sell_asset_combo.clear()
+            self.trend_asset_combo.clear()
+
+            for asset in response[:50]:  # Display up to 50 assets
+                row_position = self.market_table.rowCount()
+                self.market_table.insertRow(row_position)
+                self.market_table.setItem(row_position, 0, QTableWidgetItem(asset['name']))
+                self.market_table.setItem(row_position, 1, QTableWidgetItem(asset['symbol'].upper()))
+                self.market_table.setItem(row_position, 2, QTableWidgetItem(f"${asset['current_price']:.2f}"))
+                self.market_table.setItem(row_position, 3, QTableWidgetItem(f"${asset.get('market_cap', 'N/A')}"))
+
+                # Populate combo boxes for trading and trends
+                self.buy_asset_combo.addItem(asset['name'])
+                self.sell_asset_combo.addItem(asset['name'])
+                self.trend_asset_combo.addItem(asset['name'])
+
+            self.market_table.resizeColumnsToContents()
+            self.show_success_message("Market data fetched successfully!")
+        else:
+            self.show_error_message("Failed to fetch market data.")
+
+    def view_portfolio(self):
+        """Fetch and display user's portfolio"""
+        if not self.current_user:
+            self.show_error_message("Please login first.")
+            return
+
+        data = {'username': self.current_user}
+        response = self._make_request('/portfolio/view', method='post', data=data)
+        if response:
+            self.portfolio_table.setRowCount(0)  # Clear existing data
+            total_net_worth = response['total_net_worth']
+            self.balance_label.setText(f"Balance: ${response['account_balance']:.2f} (Net Worth: ${total_net_worth:.2f})")
+
+            for holding in response.get('holdings', []):
+                row_position = self.portfolio_table.rowCount()
+                self.portfolio_table.insertRow(row_position)
+                self.portfolio_table.setItem(row_position, 0, QTableWidgetItem(holding.get('asset', 'N/A')))
+                self.portfolio_table.setItem(row_position, 1, QTableWidgetItem(str(holding.get('quantity', 0))))
+                self.portfolio_table.setItem(row_position, 2, QTableWidgetItem(f"${holding.get('current_price', 0):.2f}"))
+                self.portfolio_table.setItem(row_position, 3, QTableWidgetItem(f"${holding.get('total_value', 0):.2f}"))
+                self.portfolio_table.setItem(row_position, 4, QTableWidgetItem(f"{holding.get('profit_loss_percentage', 0):.2f}%"))
+
+            self.portfolio_table.resizeColumnsToContents()
+
     def buy_asset(self):
         """Handle buying an asset"""
         if not self.current_user:
