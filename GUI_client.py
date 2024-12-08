@@ -10,7 +10,7 @@ from PyQt6.QtWidgets import (
     QComboBox, QDialogButtonBox, QScrollArea, QGraphicsDropShadowEffect,
     QGraphicsBlurEffect
 )
-from PyQt6.QtGui import QFont, QIcon, QColor, QPalette, QGradient, QLinearGradient
+from PyQt6.QtGui import QFont, QIcon, QColor, QPalette, QGradient, QLinearGradient, QDoubleValidator
 from PyQt6.QtCore import Qt, QSize
 
 class StyledButton(QPushButton):
@@ -321,7 +321,7 @@ class CryptoTradingGUI(QMainWindow):
         # Sell section
         sell_group = QWidget()
         sell_layout = QVBoxLayout()
-        sell_group.setLayout(buy_layout)
+        sell_group.setLayout(sell_layout)
 
         sell_title = QLabel("Sell Cryptocurrency")
         sell_title.setStyleSheet("""
@@ -330,9 +330,13 @@ class CryptoTradingGUI(QMainWindow):
             color: #3498db;
             margin-bottom: 20px;
         """)
-    
-        self.sell_asset_combo = QComboBox()
-        self.sell_quantity_combo = QComboBox()
+
+        self.sell_asset_combo = QComboBox()  # Combo box for selecting the asset to sell
+        self.sell_asset_combo.currentIndexChanged.connect(self.update_sell_quantity_combo)  # Connect to update method
+        self.sell_quantity_input = QLineEdit()  # Change to QLineEdit for quantity input
+        self.sell_quantity_input.setPlaceholderText("Enter quantity to sell")
+        self.sell_quantity_input.setValidator(QDoubleValidator(0.99, 99.99, 2))  # Allow only numeric input
+
         sell_btn = StyledButton("Sell", primary=True)
         sell_btn.clicked.connect(self.sell_asset)
 
@@ -340,7 +344,7 @@ class CryptoTradingGUI(QMainWindow):
         sell_layout.addWidget(QLabel("Asset:"))
         sell_layout.addWidget(self.sell_asset_combo)
         sell_layout.addWidget(QLabel("Quantity:"))
-        sell_layout.addWidget(self.sell_quantity_combo)
+        sell_layout.addWidget(self.sell_quantity_input)  # Use QLineEdit for quantity
         sell_layout.addWidget(sell_btn)
 
         trade_layout.addWidget(sell_group)
@@ -359,41 +363,18 @@ class CryptoTradingGUI(QMainWindow):
         """)
 
         # Create the combo box for selecting the asset for trend analysis
-        self.trend_asset_combo = QComboBox()  # Define the combo box here
-        view_trend_btn = StyledButton("View Trend", primary=True)
-        view_trend_btn.clicked.connect(self.view_asset_trend)
-
-        self.trend_chart = QLabel("Trend chart will be displayed here.")
+        self.trend_asset_combo = QComboBox()
+        self.trend_asset_combo.addItems(self.available_assets)  # Populate with available assets
         trend_layout.addWidget(trend_title)
         trend_layout.addWidget(QLabel("Select Asset:"))
-        trend_layout.addWidget(self.trend_asset_combo)  # Add the combo box to the layout
-        trend_layout.addWidget(view_trend_btn)
-        trend_layout.addWidget(self.trend_chart)
+        trend_layout.addWidget(self.trend_asset_combo)
 
-        # Asset Trends Page
-        self.asset_trend_page = QWidget()  # Define asset_trend_page
-        trend_layout = QVBoxLayout()
-        self.asset_trend_page.setLayout(trend_layout)
+        # Add additional components for displaying trends
+        self.trend_display = QLabel("Trend data will be displayed here.")
+        trend_layout.addWidget(self.trend_display)
 
-        trend_title = QLabel("Asset Trends")
-        trend_title.setStyleSheet("""
-            font-size: 24px;
-            font-weight: bold;
-            color: #3498db;
-            margin-bottom: 20px;
-        """)
-
-        # Create the combo box for selecting the asset for trend analysis
-        self.trend_asset_combo = QComboBox()  # Define the combo box here
-        view_trend_btn = StyledButton("View Trend", primary=True)
-        view_trend_btn.clicked.connect(self.view_asset_trend)
-
-        self.trend_chart = QLabel("Trend chart will be displayed here.")
-        trend_layout.addWidget(trend_title)
-        trend_layout.addWidget(QLabel("Select Asset:"))
-        trend_layout.addWidget(self.trend_asset_combo)  # Add the combo box to the layout
-        trend_layout.addWidget(view_trend_btn)
-        trend_layout.addWidget(self.trend_chart)
+        # Connect the asset selection to a method that fetches and displays trends
+        self.trend_asset_combo.currentIndexChanged.connect(self.display_asset_trend)
 
         # Transaction History Page
         self.transaction_page = QWidget()
@@ -429,7 +410,33 @@ class CryptoTradingGUI(QMainWindow):
         self.stacked_widget.addWidget(self.asset_trend_page)
         self.stacked_widget.addWidget(self.transaction_page)
 
-    # The rest of the methods remain exactly the same as in the original implementation
+    # Method to update the sell quantity combo based on selected asset
+    def update_sell_quantity_combo(self):
+        """Update the sell quantity input based on the selected asset."""
+        asset_name = self.sell_asset_combo.currentText()
+        if asset_name:
+            # Fetch the user's portfolio to get the quantity of the selected asset
+            data = {'username': self.current_user}
+            response = self._make_request('/portfolio/view', method='post', data=data)
+            if response:
+                for holding in response.get('holdings', []):
+                    if holding.get('asset') == asset_name:
+                        self.sell_quantity_input.setText(str(holding.get('quantity', 0)))  # Set the available quantity
+                        break
+                else:
+                    self.sell_quantity_input.clear()  # Clear if asset not found
+
+    def display_asset_trend(self):
+        """Fetch and display the trend for the selected asset."""
+        asset_name = self.trend_asset_combo.currentText()
+        if asset_name:
+            response = self._make_request(f'/trends/{asset_name}', method='get')
+            if response:
+                trend_data = response.get('trend_data', 'No data available.')
+                self.trend_display.setText(trend_data)
+            else:
+                self.trend_display.setText("Error fetching trend data.")    
+
     def _make_request(self, endpoint, method='get', data=None):
         try:
             full_url = f"{self.base_url}{endpoint}"
@@ -544,40 +551,6 @@ class CryptoTradingGUI(QMainWindow):
             if response:
                 self.show_success_message(response.get('message', 'Account created successfully!'))
     
-    def create_account(self):
-        """Handle account creation"""
-        username = self.username_input.text()
-        password = self.password_input.text()
-        
-        # Open dialog for additional details
-        dialog = QDialog(self)
-        dialog.setWindowTitle("Create Account")
-        layout = QFormLayout()
-        
-        email_input = QLineEdit()
-        layout.addRow("Email:", email_input)
-        
-        buttons = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
-        )
-        buttons.accepted.connect(dialog.accept)
-        buttons.rejected.connect(dialog.reject)
-        layout.addRow(buttons)
-        
-        dialog.setLayout(layout)
-        
-        if dialog.exec() == QDialog.DialogCode.Accepted:
-            email = email_input.text()
-            data = {
-                'username': username,
-                'password': password,
-                'email': email
-            }
-            
-            response = self._make_request('/create_account', method='post', data=data)
-            if response:
-                self.show_success_message(response.get('message', 'Account created successfully!'))
-    
     def check_balance(self):
         """Fetch and display user balance"""
         if not self.current_user:
@@ -666,7 +639,7 @@ class CryptoTradingGUI(QMainWindow):
     def fetch_market_data(self):
         """Fetch and display current market data"""
         response = self._make_request('/market_data')
-        if response:
+        if response and isinstance(response, list):  # Check if response is a list
             self.market_data = response
             self.market_table.setRowCount(0)  # Clear existing data
             self.buy_asset_combo.clear()     # Clear combo box options
@@ -688,6 +661,8 @@ class CryptoTradingGUI(QMainWindow):
 
             self.market_table.resizeColumnsToContents()
             self.show_success_message("Market data fetched successfully!")
+        else:
+            self.show_error_message("Failed to fetch market data.")
 
     def view_portfolio(self):
         """Fetch and display user's portfolio"""
@@ -739,25 +714,35 @@ class CryptoTradingGUI(QMainWindow):
             self.show_error_message("Invalid quantity entered.")
 
     def sell_asset(self):
-        """Handle selling an asset"""
-        if not self.current_user:
-            self.show_error_message("Please login first.")
-            return
-
-        asset_name = self.sell_asset_combo.currentText()
+        """Sell an asset and gain virtual money"""
         try:
-            quantity = float(self.sell_quantity_input.text())
-            data = {
-                'username': self.current_user,
-                'asset_name': asset_name,
-                'quantity': quantity
-            }
-            response = self._make_request('/trade/sell', method='post', data=data)
-            if response:
-                self.show_success_message(response.get('message', 'Sale successful!'))
-                self.check_balance()  # Refresh balance
+            # Get user input for asset name and quantity
+            asset_name = self.sell_asset_combo.currentText()  # Use the combo box for asset name
+            quantity = float(self.sell_quantity_input.text())  # Use the QLineEdit for quantity
+
+            if quantity <= 0:
+                self.show_error_message("Quantity must be greater than zero.")
+                return
+
+            # Call the server's sell asset endpoint
+            response = requests.post(f"{self.base_url}/trade/sell", json={
+                "username": self.current_user,  # Use the current user
+                "asset_name": asset_name,
+                "quantity": quantity
+            })
+
+            if response.status_code == 200:
+                data = response.json()
+                self.show_success_message(data["message"])
+                self.view_portfolio()  # Refresh the portfolio view after selling
+            else:
+                data = response.json()
+                self.show_error_message(data.get("message", "Error selling asset."))
+
         except ValueError:
-            self.show_error_message("Invalid quantity entered.")
+            self.show_error_message("Invalid quantity.")
+        except Exception as e:
+            self.show_error_message(f"Error: {str(e)}")
 
     def view_transaction_history(self):
         """Fetch and display transaction history"""
