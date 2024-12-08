@@ -8,10 +8,9 @@ from PyQt6.QtWidgets import (
     QStackedWidget, QPushButton, QLabel, QLineEdit, QMessageBox, 
     QTableWidget, QTableWidgetItem, QDialog, QFormLayout, 
     QComboBox, QDialogButtonBox, QScrollArea, QGraphicsDropShadowEffect,
-    QGraphicsBlurEffect
 )
-from PyQt6.QtGui import QFont, QIcon, QColor, QPalette, QGradient, QLinearGradient, QDoubleValidator
-from PyQt6.QtCore import Qt, QSize
+from PyQt6.QtGui import QColor, QDoubleValidator
+from PyQt6.QtCore import Qt
 
 class StyledButton(QPushButton):
     """Custom styled button for a more modern look"""
@@ -40,6 +39,7 @@ class CryptoTradingGUI(QMainWindow):
         self.base_url = 'http://localhost:5000'
         self.current_user = None
         self.market_data = None
+        self.available_assets = []  # Initialize available assets
         
         # Set up a dark, modern theme
         self.setup_theme()
@@ -175,6 +175,7 @@ class CryptoTradingGUI(QMainWindow):
     
     def create_pages(self):
         """Create pages with enhanced styling and layout"""
+    
         # Login Page
         self.login_page = QWidget()
         login_layout = QVBoxLayout()
@@ -303,7 +304,7 @@ class CryptoTradingGUI(QMainWindow):
             color: #3498db;
             margin-bottom: 20px;
         """)
-    
+
         self.buy_asset_combo = QComboBox()
         self.buy_quantity_input = QLineEdit()
         buy_btn = StyledButton("Buy", primary=True)
@@ -332,7 +333,6 @@ class CryptoTradingGUI(QMainWindow):
         """)
 
         self.sell_asset_combo = QComboBox()  # Combo box for selecting the asset to sell
-        self.sell_asset_combo.currentIndexChanged.connect(self.update_sell_quantity_combo)  # Connect to update method
         self.sell_quantity_input = QLineEdit()  # Change to QLineEdit for quantity input
         self.sell_quantity_input.setPlaceholderText("Enter quantity to sell")
         self.sell_quantity_input.setValidator(QDoubleValidator(0.99, 99.99, 2))  # Allow only numeric input
@@ -364,7 +364,6 @@ class CryptoTradingGUI(QMainWindow):
 
         # Create the combo box for selecting the asset for trend analysis
         self.trend_asset_combo = QComboBox()
-        self.trend_asset_combo.addItems(self.available_assets)  # Populate with available assets
         trend_layout.addWidget(trend_title)
         trend_layout.addWidget(QLabel("Select Asset:"))
         trend_layout.addWidget(self.trend_asset_combo)
@@ -400,7 +399,6 @@ class CryptoTradingGUI(QMainWindow):
         transaction_layout.addWidget(view_transactions_btn)
         transaction_layout.addWidget(self.transaction_table)
 
-
         # Add all pages to the stacked widget
         self.stacked_widget.addWidget(self.login_page)
         self.stacked_widget.addWidget(self.balance_page)
@@ -410,21 +408,22 @@ class CryptoTradingGUI(QMainWindow):
         self.stacked_widget.addWidget(self.asset_trend_page)
         self.stacked_widget.addWidget(self.transaction_page)
 
-    # Method to update the sell quantity combo based on selected asset
+        # Fetch market data to populate assets
+        self.fetch_market_data()
+
     def update_sell_quantity_combo(self):
         """Update the sell quantity input based on the selected asset."""
         asset_name = self.sell_asset_combo.currentText()
         if asset_name:
-            # Fetch the user's portfolio to get the quantity of the selected asset
             data = {'username': self.current_user}
             response = self._make_request('/portfolio/view', method='post', data=data)
             if response:
                 for holding in response.get('holdings', []):
                     if holding.get('asset') == asset_name:
-                        self.sell_quantity_input.setText(str(holding.get('quantity', 0)))  # Set the available quantity
+                        self.sell_quantity_input.setText(str(holding.get('quantity', 0)))
                         break
                 else:
-                    self.sell_quantity_input.clear()  # Clear if asset not found
+                    self.sell_quantity_input.clear()
 
     def display_asset_trend(self):
         """Fetch and display the trend for the selected asset."""
@@ -435,7 +434,7 @@ class CryptoTradingGUI(QMainWindow):
                 trend_data = response.get('trend_data', 'No data available.')
                 self.trend_display.setText(trend_data)
             else:
-                self.trend_display.setText("Error fetching trend data.")    
+                self.trend_display.setText("Error fetching trend data.")
 
     def _make_request(self, endpoint, method='get', data=None):
         try:
@@ -452,7 +451,7 @@ class CryptoTradingGUI(QMainWindow):
         except requests.exceptions.RequestException as e:
             self.show_error_message(f"Error making request: {e}")
             return None
-    
+
     def show_error_message(self, message):
         """Display error message"""
         error_dialog = QMessageBox(self)
@@ -498,7 +497,7 @@ class CryptoTradingGUI(QMainWindow):
             }
         """)
         success_dialog.exec()
-    
+
     def login(self):
         """Handle user login"""
         username = self.username_input.text()
@@ -506,7 +505,8 @@ class CryptoTradingGUI(QMainWindow):
     
         data = {
             'username': username,
-            'password': password }
+            'password': password
+        }
     
         response = self._make_request('/login', method='post', data=data)
         if response and response.get('message') == 'Login successful.':
@@ -522,7 +522,6 @@ class CryptoTradingGUI(QMainWindow):
         username = self.username_input.text()
         password = self.password_input.text()
     
-        # Open dialog for additional details
         dialog = QDialog(self)
         dialog.setWindowTitle("Create Account")
         layout = QFormLayout()
@@ -550,7 +549,7 @@ class CryptoTradingGUI(QMainWindow):
             response = self._make_request('/create_account', method='post', data=data)
             if response:
                 self.show_success_message(response.get('message', 'Account created successfully!'))
-    
+
     def check_balance(self):
         """Fetch and display user balance"""
         if not self.current_user:
@@ -635,7 +634,7 @@ class CryptoTradingGUI(QMainWindow):
                     self.check_balance()
             except ValueError:
                 self.show_error_message("Invalid amount entered.")
-    
+
     def fetch_market_data(self):
         """Fetch and display current market data"""
         response = self._make_request('/market_data')
@@ -716,7 +715,6 @@ class CryptoTradingGUI(QMainWindow):
     def sell_asset(self):
         """Sell an asset and gain virtual money"""
         try:
-            # Get user input for asset name and quantity
             asset_name = self.sell_asset_combo.currentText()  # Use the combo box for asset name
             quantity = float(self.sell_quantity_input.text())  # Use the QLineEdit for quantity
 
@@ -724,9 +722,8 @@ class CryptoTradingGUI(QMainWindow):
                 self.show_error_message("Quantity must be greater than zero.")
                 return
 
-            # Call the server's sell asset endpoint
             response = requests.post(f"{self.base_url}/trade/sell", json={
-                "username": self.current_user,  # Use the current user
+                "username": self.current_user,
                 "asset_name": asset_name,
                 "quantity": quantity
             })
