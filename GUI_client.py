@@ -62,117 +62,157 @@ class StyledButton(QPushButton):
         """)
 
 class CryptoTradingGUI(QMainWindow):
-    def __init__(self):
+    def __init__(self): # Calling the parent's class constructor with button text
         super().__init__()
-        self.base_url = 'http://localhost:5000'
-        self.current_user = None
-        self.market_data = None
-        self.available_assets = []  # Initialize available assets
+        self.base_url = 'http://localhost:5000'  # Base URL for API requests
+        self.current_user = None  # Store the current user
+        self.market_data = None  # Store retrieved market data
+        self.available_assets = []  # Initialize available assets to empty list
         
-        # Set up a dark, modern theme
+        # Set up a dark, modern theme with a custom stylesheet
         self.setup_theme()
         
-        self.setWindowTitle('CryptoVault Trading Platform')
-        self.setGeometry(100, 100, 1400, 900)
+        self.setWindowTitle('CryptoVault Trading Platform')  # Set window title
+        self.setGeometry(100, 100, 1400, 900)  # Set window size and position
         
         # Main widget and layout
-        main_widget = QWidget()
-        main_layout = QHBoxLayout()
-        main_widget.setLayout(main_layout)
-        self.setCentralWidget(main_widget)
+        main_widget = QWidget()  # Create main widget
+        main_layout = QHBoxLayout()  # Set up horizontal layout
+        main_widget.setLayout(main_layout)  # Set layout for main widget
+        self.setCentralWidget(main_widget)  # Set main widget as central widget
         
-        # Stacked widget for main content
-        self.stacked_widget = QStackedWidget()  # Create stacked widget first
-        main_layout.addWidget(self.stacked_widget)
+        # Stacked widget for main content, which can change
+        self.stacked_widget = QStackedWidget()  # Create stacked widget first to hold multiple pages
+        main_layout.addWidget(self.stacked_widget)  # Add to main layout
         
-        # Create pages with enhanced styling
+        # Create pages with enhanced styling and layout
         self.create_pages()  # Create pages after stacked widget
         
-        # Navigation sidebar with improved styling
+        # Navigation sidebar with improved styling and layout
         nav_widget = self.create_nav_sidebar()  # Now this can access the pages
-        main_layout.addWidget(nav_widget)
+        main_layout.addWidget(nav_widget)  # Add to main layout
         
-        # Start with login page
+        # Start with login page by default
         self.stacked_widget.setCurrentWidget(self.login_page)
         
-        # Add shadow effect to the main window
-        shadow = QGraphicsDropShadowEffect(self)
+        # Add a shadow effect to the main window
+        shadow = QGraphicsDropShadowEffect(self) # Create shadow effect for main
         shadow.setBlurRadius(20)
         shadow.setColor(QColor(0, 0, 0, 80))
         shadow.setOffset(0, 0)
-        self.setGraphicsEffect(shadow)
+        self.setGraphicsEffect(shadow)  # Set the shadow effect for the main window
     
     def setup_theme(self):
-        """Set up a modern, sleek dark theme for the application"""
+        """Set up a modern, sleek dark theme for the application
+        """
+        # Global styles for main window, widgets, labels, and text inputs
         self.setStyleSheet(f"""
             QMainWindow {{
+                # Dark background
                 background-color: {BACKGROUND_DARKEST};
+                # Light text color
                 color: {TEXT_PRIMARY};
+                # Use the primary font
                 font-family: '{FONT_PRIMARY}', sans-serif;
             }}
         
             QWidget {{
+                # Darker background
                 background-color: {BACKGROUND_DARK};
+                # Same light text color
                 color: {TEXT_PRIMARY};
+                # Same primary font
                 font-family: '{FONT_PRIMARY}', sans-serif;
             }}
         
             QLabel {{
+                # Same light text color
                 color: {TEXT_PRIMARY};
+                # Same primary font
                 font-family: '{FONT_PRIMARY}', sans-serif;
             }}
         
             QLineEdit {{
+                # Lighter background
                 background-color: {BACKGROUND_MEDIUM};
+                # Same light text color
                 color: {TEXT_PRIMARY};
+                # Border and rounded corners
                 border: 1px solid {BACKGROUND_LIGHT};
                 border-radius: 6px;
+                # Padding for text input
                 padding: 10px;
+                # Same primary font
                 font-family: '{FONT_PRIMARY}', sans-serif;
+                # Same font size as labels
                 font-size: 14px;
             }}
         
             QTableWidget {{
+                # Dark background
                 background-color: {BACKGROUND_DARKEST};
+                # Same light text color
                 color: {TEXT_PRIMARY};
+                # Same primary font
                 font-family: '{FONT_PRIMARY}', sans-serif;
+                # Grid lines between rows
                 gridline-color: {BACKGROUND_MEDIUM};
+                # No border
                 border: none;
             }}
         
+            # Styles for odd and even rows
             QTableWidget::item:nth-child(odd) {{
+                # Lighter background for odd rows
                 background-color: {BACKGROUND_MEDIUM};  /* Color for odd rows */
             }}
         
             QTableWidget::item:nth-child(even) {{
+                # Lighter background for even rows
                 background-color: {BACKGROUND_LIGHT};  /* Color for even rows */
             }}
 
             QTableWidget::item {{
+                # Same light text color
                 color: {TEXT_PRIMARY};
+                # Padding for table items
                 padding: 8px;
-                border-bottom: 1px solid 
+                # Bottom border for each row
+                border-bottom: 1px solid {BACKGROUND_MEDIUM};
+                # Lighter background for each item
                 background-color: {BACKGROUND_MEDIUM};
             }}
         
             QHeaderView::section {{
+                # Lighter background for header
                 background-color: {BACKGROUND_MEDIUM};
+                # Accent color for header text
                 color: {PRIMARY_ACCENT};
+                # Padding for header text
                 padding: 10px;
+                # No border
                 border: none;
+                # Bold font
                 font-weight: bold;
+                # Same primary font
                 font-family: '{FONT_PRIMARY}', sans-serif;
             }}
         
             QComboBox {{
+                # Lighter background for combo box
                 background-color: {BACKGROUND_MEDIUM};
+                # Same light text color
                 color: {TEXT_PRIMARY};
+                # Rounded corners
                 border-radius: 6px;
+                # Padding for combo box
                 padding: 10px;
+                # Same primary font
                 font-family: '{FONT_PRIMARY}', sans-serif;
             }}
         
             QComboBox::drop-down {{
+                # Position and style for the drop-down arrow
                 subcontrol-origin: padding;
                 subcontrol-position: top right;
                 width: 40px;
@@ -182,36 +222,50 @@ class CryptoTradingGUI(QMainWindow):
             }}
         
             QScrollArea {{
+                # No border
                 border: none;
             }}
         """)
     
     def create_nav_sidebar(self):
         """Create a styled navigation sidebar"""
+        # Create a widget for the navigation sidebar
         nav_widget = QWidget()
         nav_layout = QVBoxLayout()
         nav_widget.setLayout(nav_layout)
+        # Set the width of the sidebar
         nav_widget.setFixedWidth(250)
+        # Style the sidebar
         nav_widget.setStyleSheet(f"""
             QWidget {{
+                # Dark background
                 background-color: {BACKGROUND_DARK};
+                # Border on the right
                 border-right: 1px solid {BACKGROUND_MEDIUM};
             }}
         """)
 
-        # Logo or title
+        # Add a logo or title
         logo_label = QLabel("CryptoVault")
+        # Style the logo
         logo_label.setStyleSheet(f"""
+            # Large font size
             font-size: 28px;
+            # Bold font
             font-weight: bold;
+            # Accent color
             color: {PRIMARY_ACCENT};
+            # Padding for the logo
             padding: 20px;
+            # Center the logo
             text-align: center;
+            # Same primary font
             font-family: '{FONT_PRIMARY}', sans-serif;
         """)
+        # Add the logo to the sidebar
         nav_layout.addWidget(logo_label)
 
-        # Navigation buttons
+        # Create navigation buttons
         nav_buttons = [
             ("Dashboard", self.balance_page),
             ("Market Data", self.market_data_page),
@@ -221,21 +275,29 @@ class CryptoTradingGUI(QMainWindow):
             ("Asset Trends", self.asset_trend_page)
         ]
 
+        # Iterate through the buttons and add them to the sidebar
         for label, page in nav_buttons:
+            # Create a styled button
             btn = StyledButton(label)
+            # Add an event handler to switch to the page when clicked
             btn.clicked.connect(lambda checked, p=page: self.stacked_widget.setCurrentWidget(p))
+            # Add the button to the sidebar
             nav_layout.addWidget(btn)
 
+        # Add some stretch to the sidebar
         nav_layout.addStretch()
 
-        # Logout button
+        # Create a logout button
         logout_btn = StyledButton("Logout", primary=False)
+        # Add an event handler to log out when clicked
         logout_btn.clicked.connect(self.logout)
+        # Add the logout button to the sidebar
         nav_layout.addWidget(logout_btn)
 
-        # Add padding and stretch
+        # Add some padding and stretch
         nav_layout.addSpacing(20)
 
+        # Return the sidebar
         return nav_widget
     
     def create_pages(self):
@@ -688,9 +750,11 @@ class CryptoTradingGUI(QMainWindow):
         page = QWidget()
         layout = QVBoxLayout()
 
-        self.canvas = FigureCanvas(Figure())  # Create a Matplotlib canvas
+        # Create a Matplotlib canvas
+        self.canvas = FigureCanvas(Figure())
         layout.addWidget(self.canvas)  # Add the canvas to the layout
 
+        # Create a button to show the asset trend
         self.plot_button = StyledButton("Show Asset Trend", primary=True)
         self.plot_button.clicked.connect(self.view_asset_trend)  # Connect button to the plotting function
         layout.addWidget(self.plot_button)
@@ -700,20 +764,37 @@ class CryptoTradingGUI(QMainWindow):
 
     def update_sell_quantity_combo(self):
         """Update the sell quantity input based on the selected asset."""
+        # Get the currently selected asset name
         asset_name = self.sell_asset_combo.currentText()
         if asset_name:
+            # Prepare data to request the user's portfolio
             data = {'username': self.current_user}
+            # Make a request to view the portfolio data
             response = self._make_request('/portfolio/view', method='post', data=data)
             if response:
+                # Iterate through holdings to find the selected asset
                 for holding in response.get('holdings', []):
                     if holding.get('asset') == asset_name:
+                        # Update the sell quantity input with the asset's quantity
                         self.sell_quantity_input.setText(str(holding.get('quantity', 0)))
                         break
                 else:
+                    # Clear the input if the asset is not found in holdings
                     self.sell_quantity_input.clear()
 
     def display_asset_trend(self):
-        """Fetch and display the trend for the selected asset."""
+        """Fetch and display the trend for the selected asset.
+
+        This method is connected to the 'currentIndexChanged' signal of the
+        asset combo box on the asset trend page. When the selected asset
+        changes, this method is called to fetch and display the trend data
+        for the selected asset.
+
+        If the asset name is not empty, it makes a GET request to the server
+        to fetch the trend data. If the request is successful, it displays
+        the trend data in the label on the asset trend page. Otherwise, it
+        displays an error message.
+        """
         asset_name = self.trend_asset_combo.currentText()
         if asset_name:
             response = self._make_request(f'/historical_prices/{asset_name}', method='get')
@@ -724,6 +805,16 @@ class CryptoTradingGUI(QMainWindow):
                 self.trend_display.setText("Error fetching trend data.")
 
     def _make_request(self, endpoint, method='get', data=None):
+        """Make an HTTP request to the server
+
+        Args:
+            endpoint (str): The endpoint to make the request to
+            method (str, optional): The HTTP method to use. Defaults to 'get'.
+            data (dict, optional): The data to send in the request body. Defaults to None.
+
+        Returns:
+            dict: The JSON response from the server if the request is successful
+        """
         try:
             full_url = f"{self.base_url}{endpoint}"
             if method.lower() == 'get':
@@ -736,8 +827,10 @@ class CryptoTradingGUI(QMainWindow):
             response.raise_for_status()
             return response.json()
         except requests.exceptions.RequestException as e:
+            # If the request fails for any reason, show an error message
             self.show_error_message(f"Error making request: {e}")
             return None
+
 
     def show_error_message(self, message):
         """Display error message with modern styling"""
@@ -801,33 +894,44 @@ class CryptoTradingGUI(QMainWindow):
 
     def login(self):
         """Handle user login"""
+        # Get username and password from input fields
         username = self.username_input.text()
         password = self.password_input.text()
 
+        # Construct data to send to server
         data = {
             'username': username,
             'password': password
         }
 
+        # Make POST request to /login
         response = self._make_request('/login', method='post', data=data)
+
+        # Successful login
         if response and response.get('message') == 'Login successful.':
             self.current_user = username
-        
+
             # Directly set the welcome message
             self.welcome_label.setText(f"Welcome back, {username}!")
-        
+
             # Fetch balance
             balance_response = self._make_request(f'/account/{username}')
             if balance_response:
                 balance = balance_response.get('balance', 0)
                 self.balance_label.setText(f"Balance: ${balance:.2f}")
-        
+
+            # Switch to balance page
             self.stacked_widget.setCurrentWidget(self.balance_page)
         else:
+            # Login failed
             self.show_error_message("Login failed.")
 
     def create_account(self):
-        """Handle account creation"""
+        """Handle account creation
+
+        This function creates a new account by making a POST request to the server
+        with the username, password, and email.
+        """
         username = self.username_input.text()
         password = self.password_input.text()
     
@@ -860,7 +964,12 @@ class CryptoTradingGUI(QMainWindow):
                 self.show_success_message(response.get('message', 'Account created successfully!'))
 
     def check_balance(self):
-        """Fetch and display user balance"""
+        """Fetch and display user balance after login.
+
+        This function is called after a successful login or when the user switches
+        to the balance page. It fetches the user balance and updates the balance
+        label on the balance page.
+        """
         if not self.current_user:
             self.show_error_message("Please login first.")
             return
@@ -874,7 +983,13 @@ class CryptoTradingGUI(QMainWindow):
             self.welcome_label.setText(f"Welcome back, {self.current_user}!")
 
     def deposit_funds(self):
-        """Handle fund deposit"""
+        """Handle fund deposit
+
+        This function creates a dialog to get the deposit amount from the user.
+        It then makes a POST request to the server with the username and deposit
+        amount. If the request is successful, it shows a success message and
+        updates the balance label on the balance page.
+        """
         if not self.current_user:
             self.show_error_message("Please login first.")
             return
@@ -910,8 +1025,15 @@ class CryptoTradingGUI(QMainWindow):
             except ValueError:
                 self.show_error_message("Invalid amount entered.")
 
+
     def withdraw_funds(self):
-        """Handle fund withdrawal"""
+        """Handle fund withdrawal
+
+        This function creates a dialog to get the withdrawal amount from the user.
+        It then makes a POST request to the server with the username and withdrawal
+        amount. If the request is successful, it shows a success message and
+        updates the balance label on the balance page.
+        """
         if not self.current_user:
             self.show_error_message("Please login first.")
             return
@@ -950,16 +1072,20 @@ class CryptoTradingGUI(QMainWindow):
     def view_portfolio(self):
         """Fetch and display user's portfolio"""
         if not self.current_user:
+            # User is not logged in, show error message
             self.show_error_message("Please login first.")
             return
 
+        # Send request to server to fetch user portfolio
         data = {'username': self.current_user}
         response = self._make_request('/portfolio/view', method='post', data=data)
         if response:
-            self.portfolio_table.setRowCount(0)  # Clear existing data
+            # Clear existing data and update balance label
+            self.portfolio_table.setRowCount(0)
             total_net_worth = response['total_net_worth']
             self.balance_label.setText(f"Balance: ${response['account_balance']:.2f} (Net Worth: ${total_net_worth:.2f})")
 
+            # Populate the portfolio table
             for holding in response.get('holdings', []):
                 row_position = self.portfolio_table.rowCount()
                 self.portfolio_table.insertRow(row_position)
@@ -969,10 +1095,17 @@ class CryptoTradingGUI(QMainWindow):
                 self.portfolio_table.setItem(row_position, 3, QTableWidgetItem(f"${holding.get('total_value', 0):.2f}"))
                 self.portfolio_table.setItem(row_position, 4, QTableWidgetItem(f"{holding.get('profit_loss_percentage', 0):.2f}%"))
 
+            # Resize columns to fit data
             self.portfolio_table.resizeColumnsToContents()
 
     def check_balance(self):
-        """Fetch and display user balance"""
+        """Fetch and display user balance
+        This function sends a GET request to the server to fetch the user's
+        current balance. If the request is successful, it updates the balance
+        label on the balance page.
+
+        If the user is not logged in, it shows an error message.
+        """
         if not self.current_user:
             self.show_error_message("Please login first.")
             return
@@ -983,7 +1116,13 @@ class CryptoTradingGUI(QMainWindow):
             self.balance_label.setText(f"Balance: ${balance:.2f}")
 
     def deposit_funds(self):
-        """Handle fund deposit"""
+        """Handle fund deposit
+
+        This function creates a dialog to get the deposit amount from the user.
+        It then makes a POST request to the server with the username and deposit
+        amount. If the request is successful, it shows a success message and
+        updates the balance label on the balance page.
+        """
         if not self.current_user:
             self.show_error_message("Please login first.")
             return
@@ -1021,52 +1160,66 @@ class CryptoTradingGUI(QMainWindow):
 
     def withdraw_funds(self):
         """Handle fund withdrawal"""
+        # Ensure user is logged in
         if not self.current_user:
             self.show_error_message("Please login first.")
             return
-    
+
+        # Create withdrawal dialog
         dialog = QDialog(self)
         dialog.setWindowTitle("Withdraw Funds")
         layout = QFormLayout()
-    
+
+        # Input field for withdrawal amount
         amount_input = QLineEdit()
         layout.addRow("Amount:", amount_input)
-    
+
+        # Dialog buttons for OK and Cancel actions
         buttons = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
         )
         buttons.accepted.connect(dialog.accept)
         buttons.rejected.connect(dialog.reject)
         layout.addRow(buttons)
-    
+
         dialog.setLayout(layout)
-    
+
+        # Execute dialog and process withdrawal if accepted
         if dialog.exec() == QDialog.DialogCode.Accepted:
             try:
+                # Convert user input to float
                 amount = float(amount_input.text())
+                # Prepare data for withdrawal request
                 data = {
                     'username': self.current_user,
                     'amount': amount
                 }
-            
+
+                # Send withdrawal request to server
                 response = self._make_request('/withdraw', method='post', data=data)
                 if response:
+                    # Show success message and refresh balance
                     self.show_success_message(response.get('message', 'Withdrawal successful!'))
                     self.check_balance()
             except ValueError:
+                # Handle invalid input
                 self.show_error_message("Invalid amount entered.")
 
     def fetch_market_data(self):
         """Fetch and display current market data"""
         response = self._make_request('/market_data')
         if response and isinstance(response, list):  # Check if response is a list
+            # Store response in instance variable
             self.market_data = response
-            self.market_table.setRowCount(0)  # Clear existing data
-            self.buy_asset_combo.clear()     # Clear combo box options
+            # Clear existing data in table
+            self.market_table.setRowCount(0)
+            # Clear combo box options
+            self.buy_asset_combo.clear()
             self.sell_asset_combo.clear()
             self.trend_asset_combo.clear()
 
-            for asset in response[:100]:  # Display up to 100 assets
+            # Populate table with up to 100 assets
+            for asset in response[:100]:
                 row_position = self.market_table.rowCount()
                 self.market_table.insertRow(row_position)
                 self.market_table.setItem(row_position, 0, QTableWidgetItem(asset['name']))
@@ -1079,56 +1232,73 @@ class CryptoTradingGUI(QMainWindow):
                 self.sell_asset_combo.addItem(asset['name'])
                 self.trend_asset_combo.addItem(asset['name'])
 
+            # Resize table columns to fit content
             self.market_table.resizeColumnsToContents()
+            # Show success message
             self.show_success_message("Market data fetched successfully!")
         else:
+            # Show error message
             self.show_error_message("Failed to fetch market data.")
 
     def view_portfolio(self):
         """Fetch and display user's portfolio"""
         if not self.current_user:
+            # Show error message if user is not logged in
             self.show_error_message("Please login first.")
             return
 
+        # Prepare data for request
         data = {'username': self.current_user}
         response = self._make_request('/portfolio/view', method='post', data=data)
         
         if response:
-            self.portfolio_table.setRowCount(0)  # Clear existing data
+            # Clear existing data in table
+            self.portfolio_table.setRowCount(0)
+            # Update balance label
             total_net_worth = response['total_net_worth']
             self.balance_label.setText(f"Balance: ${response['account_balance']:.2f} (Net Worth: ${total_net_worth:.2f})")
 
+            # Populate table with portfolio holdings
             for holding in response.get('holdings', []):
-            
+                # Insert new row
                 row_position = self.portfolio_table.rowCount()
                 self.portfolio_table.insertRow(row_position)
+                
+                # Set table items
                 self.portfolio_table.setItem(row_position, 0, QTableWidgetItem(holding.get('asset', 'N/A')))
                 self.portfolio_table.setItem(row_position, 1, QTableWidgetItem(str(holding.get('quantity', 0))))
                 self.portfolio_table.setItem(row_position, 2, QTableWidgetItem(f"${holding.get('current_price', 0):.2f}"))
-            
+                
                 # Calculate total value manually if not provided
                 current_price = holding.get('current_price', 0)
                 quantity = holding.get('quantity', 0)
                 total_value = current_price * quantity
             
+                # Set total value and profit/loss percentage
                 self.portfolio_table.setItem(row_position, 3, QTableWidgetItem(f"${total_value:.2f}"))
                 self.portfolio_table.setItem(row_position, 4, QTableWidgetItem(f"{holding.get('profit_loss_percentage', 0):.2f}%"))
 
+            # Resize columns to fit data
             self.portfolio_table.resizeColumnsToContents()
 
     def buy_asset(self):
         """Handle buying an asset"""
         if not self.current_user:
+            # Show error message if user is not logged in
             self.show_error_message("Please login first.")
             return
 
         asset_name = self.buy_asset_combo.currentText()
         try:
+            # Get quantity from input field
             quantity = float(self.buy_quantity_input.text())
+            
+            # Check if quantity is valid
             if quantity <= 0:
                 self.show_error_message("Quantity must be greater than 0.")
                 return
-            
+
+            # Prepare data for request
             data = {
                 'username': self.current_user,
                 'asset_name': asset_name,
@@ -1136,35 +1306,45 @@ class CryptoTradingGUI(QMainWindow):
             }
             response = self._make_request('/trade/buy', method='post', data=data)
             if response:
+                # Show success message and refresh balance
                 self.show_success_message(response.get('message', 'Purchase successful!'))
-                self.check_balance()  # Refresh balance
+                self.check_balance()
         except ValueError:
+            # Invalid input, show error message
             self.show_error_message("Invalid quantity entered.")
+
 
     def sell_asset(self):
         """Sell an asset and gain virtual money"""
         try:
-            asset_name = self.sell_asset_combo.currentText()  # Use the combo box for asset name
-            quantity = float(self.sell_quantity_input.text())  # Use the QLineEdit for quantity
+            # Get selected asset name and entered quantity
+            asset_name = self.sell_asset_combo.currentText()
+            quantity = float(self.sell_quantity_input.text())
 
+            # Validate quantity
             if quantity <= 0:
                 self.show_error_message("Quantity must be greater than zero.")
                 return
 
+            # Make request to sell asset
             response = requests.post(f"{self.base_url}/trade/sell", json={
                 "username": self.current_user,
                 "asset_name": asset_name,
                 "quantity": quantity
             })
 
+            # Check response status code
             if response.status_code == 200:
+                # Show success message and refresh portfolio view
                 data = response.json()
                 self.show_success_message(data["message"])
-                self.view_portfolio()  # Refresh the portfolio view after selling
+                self.view_portfolio()
             else:
+                # Show error message
                 data = response.json()
                 self.show_error_message(data.get("message", "Error selling asset."))
 
+        # Catch invalid input and other exceptions
         except ValueError:
             self.show_error_message("Invalid quantity.")
         except Exception as e:
@@ -1176,13 +1356,22 @@ class CryptoTradingGUI(QMainWindow):
             self.show_error_message("Please login first.")
             return
 
+        # Prepare request data
         data = {'username': self.current_user}
+        
+        # Send request to fetch transaction history
         response = self._make_request('/transactions/history', method='post', data=data)
+        
+        # Check if response contains transaction history
         if response and response.get('transaction_history'):
-            self.transaction_table.setRowCount(0)  # Clear existing data
+            self.transaction_table.setRowCount(0)  # Clear existing data in the table
+            
+            # Iterate through each transaction and populate the table
             for transaction in response['transaction_history']:
                 row_position = self.transaction_table.rowCount()
                 self.transaction_table.insertRow(row_position)
+                
+                # Set transaction details in the respective columns
                 self.transaction_table.setItem(row_position, 0, QTableWidgetItem(transaction['timestamp']))
                 self.transaction_table.setItem(row_position, 1, QTableWidgetItem(transaction['type']))
                 self.transaction_table.setItem(row_position, 2, QTableWidgetItem(f"${transaction['amount']:.2f}"))
@@ -1190,71 +1379,77 @@ class CryptoTradingGUI(QMainWindow):
 
     def view_asset_trend(self):
         """Fetch and display asset price trend"""
-        # Clear any existing plots
-        self.trend_figure.clear()
+        self.trend_figure.clear()  # Clear any existing plots
 
-        # Get selected asset
-        asset_name = self.trend_asset_combo.currentText()
+        asset_name = self.trend_asset_combo.currentText()  # Get selected asset
         if not asset_name:
             self.show_error_message("Please select an asset.")
             return
 
-        # Clear the trend display label
-        self.trend_display.setText("")  # Clear any previous messages
+        self.trend_display.setText("")  # Clear the trend display label
 
         try:
-            # Fetch historical prices
-            response = self._make_request(f'/historical_prices/{asset_name}')
+            response = self._make_request(f'/historical_prices/{asset_name}')  # Fetch historical prices
             if not response or not response.get('historical_prices'):
-                self.trend_display.setText("")  # Ensure nothing is displayed
+                self.trend_display.setText("")  # Clear display if no data
                 return
 
-            # Process historical prices
-            prices = response['historical_prices']
+            prices = response['historical_prices']  # Process historical prices
             timestamps = [datetime.fromisoformat(entry['timestamp']) for entry in prices]
             price_values = [entry['price'] for entry in prices]
 
-            # Create subplot
-            ax = self.trend_figure.add_subplot(111)
-            ax.clear()
-            ax.plot(timestamps, price_values, label=asset_name, color=PRIMARY_ACCENT)
-            ax.set_title(f"{asset_name} Price Trend", color=TEXT_PRIMARY)
-            ax.set_xlabel("Timestamp", color=TEXT_PRIMARY)
-            ax.set_ylabel("Price ($)", color=TEXT_PRIMARY)
-            ax.tick_params(axis='x', rotation=45, colors=TEXT_PRIMARY)
-            ax.tick_params(axis='y', colors=TEXT_PRIMARY)
-            ax.spines['bottom'].set_color(TEXT_PRIMARY)
-            ax.spines['top'].set_color(TEXT_PRIMARY) 
+            ax = self.trend_figure.add_subplot(111)  # Create subplot
+            ax.clear()  # Clear plot area
+            ax.plot(timestamps, price_values, label=asset_name, color=PRIMARY_ACCENT)  # Plot data
+            ax.set_title(f"{asset_name} Price Trend", color=TEXT_PRIMARY)  # Set plot title
+            ax.set_xlabel("Timestamp", color=TEXT_PRIMARY)  # Set x-axis label
+            ax.set_ylabel("Price ($)", color=TEXT_PRIMARY)  # Set y-axis label
+            ax.tick_params(axis='x', rotation=45, colors=TEXT_PRIMARY)  # Rotate x-axis labels
+            ax.tick_params(axis='y', colors=TEXT_PRIMARY)  # Set y-axis tick colors
+            ax.spines['bottom'].set_color(TEXT_PRIMARY)  # Style axis spines
+            ax.spines['top'].set_color(TEXT_PRIMARY)
             ax.spines['right'].set_color(TEXT_PRIMARY)
             ax.spines['left'].set_color(TEXT_PRIMARY)
-            ax.legend(labelcolor=TEXT_PRIMARY)
+            ax.legend(labelcolor=TEXT_PRIMARY)  # Add legend
 
-            # Set the figure background color to dark
-            self.trend_figure.patch.set_facecolor(BACKGROUND_DARK)  # Set figure background color
-            self.trend_canvas.setStyleSheet("background-color: " + BACKGROUND_DARK + ";")  # Set canvas background color
+            self.trend_figure.patch.set_facecolor(BACKGROUND_DARK)  # Set figure background
+            self.trend_canvas.setStyleSheet("background-color: " + BACKGROUND_DARK + ";")  # Set canvas background
 
-            # Adjust layout and draw
-            self.trend_figure.tight_layout()
-            self.trend_canvas.draw()
+            self.trend_figure.tight_layout()  # Adjust layout
+            self.trend_canvas.draw()  # Render the canvas
 
         except Exception as e:
-            self.show_error_message(f"Error displaying trend: {str(e)}")
+            self.show_error_message(f"Error displaying trend: {str(e)}")  # Handle exceptions
 
     def logout(self):
         """Handle user logout"""
-        self.current_user = None
-        self.username_input.clear()
-        self.password_input.clear()
-        self.balance_label.setText("Balance: $0.00")
-        self.market_table.setRowCount(0)
-        self.portfolio_table.setRowCount(0)
-        self.transaction_table.setRowCount(0)
-        self.stacked_widget.setCurrentWidget(self.login_page)
+        self.current_user = None  # Clear current user data
+        self.username_input.clear()  # Clear username input field
+        self.password_input.clear()  # Clear password input field
+        self.balance_label.setText("Balance: $0.00")  # Reset balance label
+        self.market_table.setRowCount(0)  # Clear market data table
+        self.portfolio_table.setRowCount(0)  # Clear portfolio table
+        self.transaction_table.setRowCount(0)  # Clear transaction table
+        self.stacked_widget.setCurrentWidget(self.login_page)  # Navigate to login page
 
 def main():
+    """
+    Main application entry point.
+
+    Initialize the application, create an instance of the main window, and start the application event loop.
+    """
     app = QApplication(sys.argv)
+    """
+    Create an instance of the main window.
+    """
     window = CryptoTradingGUI()
+    """
+    Show the main window.
+    """
     window.show()
+    """
+    Start the application event loop.
+    """
     sys.exit(app.exec())
 
 if __name__ == "__main__":
