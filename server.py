@@ -99,12 +99,15 @@ def authenticate(username, password):
     try:
         with sqlite3.connect(DATABASE_PATH) as conn:
             cursor = conn.cursor()
+            # Execute query to check if user exists with provided credentials
             cursor.execute(
                 "SELECT * FROM accounts WHERE username = ? AND password = ?", 
                 (username, password)
             )
+            # Return True if user is found, otherwise False
             return cursor.fetchone() is not None
     except sqlite3.Error as e:
+        # Log any database errors encountered during authentication
         logger.error(f"Authentication error: {e}")
         return False
 
@@ -121,6 +124,7 @@ def update_market_data():
             "accept": "application/json",
             "x-cg-demo-api-key": API_KEY
         }
+        # Request market data from the API
         response = requests.get(CRYPTO_API_URL, headers=headers, params={"vs_currency": "usd"})
         response.raise_for_status()  # Raise an error for bad responses
         market_data = response.json()
@@ -151,15 +155,16 @@ def update_market_data():
                     VALUES (?, ?)
                 """, (asset['name'], asset['current_price']))
                 
-            conn.commit()
+            conn.commit()  # Commit changes to the database
         
-        return market_data
+        return market_data  # Return the updated market data
     except Exception as e:
         logger.error(f"Error updating market data: {e}")
         return market_data_cache  # Return cached data in case of an error
 
 def log_transaction(username, transaction_type, amount, asset_name=None):
     """Log transactions for audit and tracking"""
+    # Insert transaction into database
     with sqlite3.connect(DATABASE_PATH) as conn:
         cursor = conn.cursor()
         cursor.execute(""" 
@@ -167,7 +172,7 @@ def log_transaction(username, transaction_type, amount, asset_name=None):
             (username, transaction_type, amount, asset_name) 
             VALUES (?, ?, ?, ?)
         """, (username, transaction_type, amount, asset_name))
-        conn.commit()
+        conn.commit()  # Commit changes to the database
 
 # Account-related Routes
 @app.route('/create_account', methods=['POST'])
@@ -179,59 +184,78 @@ def create_account():
         password = data.get('password')
         email = data.get('email')
 
+        # Create a new account in the database
         with sqlite3.connect(DATABASE_PATH) as conn:
             cursor = conn.cursor()
             try:
                 cursor.execute(
-                    "INSERT INTO accounts (username, password, email) VALUES (?, ?, ?)", 
+                    """ 
+                    INSERT INTO accounts (username, password, email) VALUES (?, ?, ?) 
+                    """, 
                     (username, password, email)
                 )
                 conn.commit()
                 logger.info(f"Account created for username: {username}")
                 return jsonify({"message": f"Account for {username} created successfully."}), 201
             except sqlite3.IntegrityError:
+                # Handle duplicate username or email
                 logger.warning(f"Account creation failed: Username or email already exists - {username}")
                 return jsonify({"message": "Username or email already exists!"}), 400
     except Exception as e:
+        # Handle any other exceptions
         logger.error(f"Account creation error: {e}")
         return jsonify({"error": str(e)}), 500
 
 @app.route('/login', methods=['POST'])
 def login():
-    """User  login endpoint"""
+    """
+    User  login endpoint
+    Returns a JSON response indicating success or failure of login
+    """
     try:
         data = request.json
         username = data.get('username')
         password = data.get('password')
 
         if authenticate(username, password):
+            # Successful login
             logger.info(f"Successful login for username: {username}")
             return jsonify({
                 "message": "Login successful.", 
                 "username": username
             }), 200
-        
-        logger.warning(f"Failed login attempt for username: {username}")
-        return jsonify({"message": "Invalid credentials."}), 401
+        else:
+            # Invalid credentials
+            logger.warning(f"Failed login attempt for username: {username}")
+            return jsonify({"message": "Invalid credentials."}), 401
     except Exception as e:
+        # Handle any unexpected errors
         logger.error(f"Login error: {e}")
         return jsonify({"error": str(e)}), 500
 
 @app.route('/account/<username>', methods=['GET'])
 def get_account(username):
     """Retrieve user account balance"""
+    # Check for invalid or insufficient username
     if not username or len(username) < 3:
         return jsonify({"error": "Invalid username."}), 400
+
     try:
+        # Connect to the database
         with sqlite3.connect(DATABASE_PATH) as conn:
+            # Retrieve the account balance
             cursor = conn.cursor()
             cursor.execute("SELECT balance FROM accounts WHERE username = ?", (username,))
             account = cursor.fetchone()
+
+            # Return account balance if found
             if account:
                 return jsonify({"balance": account[0]}), 200
             else:
+                # Return 404 if account not found
                 return jsonify({"error": "Account not found."}), 404
     except Exception as e:
+        # Handle any unexpected errors
         return jsonify({"error": str(e)}), 500
 
 @app.route('/deposit', methods=['POST'])
@@ -239,69 +263,85 @@ def deposit():
     """Deposit virtual funds into user account"""
     try:
         data = request.json
-        username = data.get('username')  # Keep username
-        amount = float(data.get('amount', 0))
+        username = data.get('username')  # Extract username from request
+        amount = float(data.get('amount', 0))  # Extract and convert amount
 
         if amount <= 0:
+            # Validate deposit amount
             return jsonify({"message": "Deposit amount must be greater than zero."}), 400
 
         with sqlite3.connect(DATABASE_PATH) as conn:
             cursor = conn.cursor()
+            # Update user balance in database
             cursor.execute("UPDATE accounts SET balance = balance + ? WHERE username = ?", (amount, username))
             if cursor.rowcount == 0:
+                # Handle case where account is not found
                 return jsonify({"message": "Account not found."}), 404
 
-            conn.commit()
+            conn.commit()  # Commit transaction
             
-            # Log the transaction
+            # Log the deposit transaction
             log_transaction(username, 'deposit', amount)
             
+            # Return success message
             return jsonify({"message": f"Deposited ${amount:.2f}."}), 200
     except ValueError:
+        # Handle invalid amount errors
         return jsonify({"message": "Invalid deposit amount."}), 400
     except Exception as e:
+        # Handle unexpected errors
         return jsonify({"error": str(e)}), 500
 
 @app.route('/withdraw', methods=['POST'])
 def withdraw():
     """Withdraw funds from user account"""
     try:
-        data = request.json
-        username = data.get('username')  # Keep username
-        amount = float(data.get('amount', 0))
+        data = request.json  # Get JSON data from the request
+        username = data.get('username')  # Extract username
+        amount = float(data.get('amount', 0))  # Extract and convert amount
 
         with sqlite3.connect(DATABASE_PATH) as conn:
             cursor = conn.cursor()
+
+            # Retrieve user's current balance
             cursor.execute("SELECT balance FROM accounts WHERE username = ?", (username,))
             balance = cursor.fetchone()[0]
 
             if balance >= amount:
+                # Deduct amount from balance if sufficient
                 cursor.execute("UPDATE accounts SET balance = balance - ? WHERE username = ?", (amount, username))
-                conn.commit()
+                conn.commit()  # Commit changes to the database
                 
-                # Log transaction
+                # Log the withdrawal transaction
                 log_transaction(username, 'withdraw', amount)
 
+                # Return success message with updated balance
                 return jsonify({
                     "message": f"Withdrew ${amount:.2f}.", 
                     "current_balance": balance - amount
                 }), 200
+            # Return error if funds are insufficient
             return jsonify({"message": "Insufficient funds."}), 400
     except ValueError:
+        # Handle invalid amount input
         return jsonify({"message": "Invalid withdrawal amount."}), 400
     except Exception as e:
+        # Handle any unexpected errors
         return jsonify({"error": str(e)}), 500
 
 @app.route('/market_data', methods=['GET'])
 def get_market_data():
     """Retrieve current market data"""
     try:
-        # Update market data before fetching
+        # Update market data before fetching (if required)
         market_data = update_market_data()
         
+        # Return market data as JSON
         return jsonify(market_data), 200
     except Exception as e:
+        # Handle any exceptions and return error message
         return jsonify({"error": str(e)}), 500
+
 
 @app.route('/portfolio/add_asset', methods=['POST'])
 def add_asset():
@@ -366,32 +406,38 @@ def remove_asset():
         asset_name = data.get('asset_name')
         quantity = float(data.get('quantity', 0))
 
+        # Check if asset exists in user's portfolio
         with sqlite3.connect(DATABASE_PATH) as conn:
             cursor = conn.cursor()
             cursor.execute("SELECT quantity FROM portfolios WHERE username = ? AND asset_name = ?", (username, asset_name))
             current_quantity = cursor.fetchone()
 
+            # Asset not found in portfolio
             if current_quantity is None:
                 return jsonify({"message": "Asset not found in portfolio."}), 404
 
+            # Check if user has sufficient quantity to remove
             current_quantity = current_quantity[0]
             if current_quantity < quantity:
                 return jsonify({"message": "Insufficient quantity to remove."}), 400
 
+            # Remove asset from portfolio
             if current_quantity == quantity:
                 cursor.execute("DELETE FROM portfolios WHERE username = ? AND asset_name = ?", (username, asset_name))
             else:
                 cursor.execute("UPDATE portfolios SET quantity = quantity - ? WHERE username = ? AND asset_name = ?", (quantity, username, asset_name))
             
+            # Commit changes and log transaction
             conn.commit()
-
-            # Log transaction
             log_transaction(username, 'remove_asset', quantity, asset_name)
 
+        # Return success message
         return jsonify({"message": f"Removed {quantity} units of {asset_name} from portfolio."}), 200
     except ValueError:
+        # Invalid quantity
         return jsonify({"message": "Invalid quantity."}), 400
     except Exception as e:
+        # Handle any other exceptions
         return jsonify({"error": str(e)}), 500
 
 @app.route('/portfolio/view', methods=['POST'])
@@ -404,15 +450,19 @@ def view_portfolio():
         with sqlite3.connect(DATABASE_PATH) as conn:
             cursor = conn.cursor()
 
+            # Retrieve user's portfolio holdings
             cursor.execute("SELECT asset_name, quantity, avg_purchase_price FROM portfolios WHERE username = ?", (username,))
             user_portfolio = cursor.fetchall()
 
             holdings = []
             total_value = 0
             for asset_name, quantity, avg_purchase_price in user_portfolio:
+                # Get current market price for each asset
                 cursor.execute("SELECT current_price FROM assets WHERE name = ?", (asset_name,))
                 current_price = cursor.fetchone()[0]
+                # Calculate total value of each holding
                 value = current_price * quantity
+                # Compile holding details, including profit/loss percentage
                 holdings.append({
                     "asset": asset_name,
                     "quantity": quantity,
@@ -427,6 +477,7 @@ def view_portfolio():
             cursor.execute("SELECT balance FROM accounts WHERE username = ?", (username,))
             account_balance = cursor.fetchone()[0]
 
+        # Return portfolio summary, including net worth
         return jsonify({
             "holdings": holdings, 
             "total_portfolio_value": total_value,
@@ -434,24 +485,28 @@ def view_portfolio():
             "total_net_worth": total_value + account_balance
         }), 200
     except Exception as e:
+        # Handle any errors that occur
         return jsonify({"error": str(e)}), 500
 
 @app.route('/trade/buy', methods=['POST'])
 def buy_asset():
     """Buy an asset using virtual money"""
     try:
+        # Extract data from request
         data = request.json
         username = data.get('username')
         asset_name = data.get('asset_name')
         quantity = float(data.get('quantity', 0))
 
+        # Validate quantity
         if quantity <= 0:
             return jsonify({"message": "Quantity must be greater than zero."}), 400
 
+        # Connect to database
         with sqlite3.connect(DATABASE_PATH) as conn:
             cursor = conn.cursor()
 
-            # Fetch the asset's current price
+            # Retrieve asset's current price
             cursor.execute("SELECT current_price FROM assets WHERE name = ?", (asset_name,))
             asset_data = cursor.fetchone()
             if not asset_data:
@@ -466,31 +521,31 @@ def buy_asset():
             if balance < total_cost:
                 return jsonify({"message": "Insufficient funds."}), 400
 
-            # Deduct the cost from the user's balance
+            # Deduct cost and update portfolio
             cursor.execute("UPDATE accounts SET balance = balance - ? WHERE username = ?", (total_cost, username))
-            conn.commit()
-
-            # Update or insert into the portfolio
-            cursor.execute(""" 
+            cursor.execute("""
                 INSERT INTO portfolios (username, asset_name, quantity, avg_purchase_price)
                 VALUES (?, ?, ?, ?)
                 ON CONFLICT(username, asset_name)
-                DO UPDATE SET 
-                    quantity = quantity + ?, 
+                DO UPDATE SET
+                    quantity = quantity + ?,
                     avg_purchase_price = (avg_purchase_price * quantity + ? * ?) / (quantity + ?)
             """, (username, asset_name, quantity, current_price, quantity, current_price, quantity, quantity))
             conn.commit()
 
-            # Log the transaction
+            # Log transaction
             log_transaction(username, 'buy', total_cost, asset_name)
 
+        # Respond with purchase confirmation
         return jsonify({
             "message": f"Purchased {quantity} units of {asset_name} for ${total_cost:.2f}.",
             "current_balance": balance - total_cost
         }), 200
     except ValueError:
+        # Handle invalid quantity
         return jsonify({"message": "Invalid quantity."}), 400
     except Exception as e:
+        # Handle unexpected errors
         return jsonify({"error": str(e)}), 500
 
 @app.route('/trade/sell', methods=['POST'])
@@ -505,7 +560,7 @@ def sell_asset():
         with sqlite3.connect(DATABASE_PATH) as conn:
             cursor = conn.cursor()
 
-            # Check portfolio for asset and quantity
+            # Validate user's portfolio
             cursor.execute("SELECT quantity, avg_purchase_price FROM portfolios WHERE username = ? AND asset_name = ?", (username, asset_name))
             portfolio_data = cursor.fetchone()
 
@@ -563,11 +618,12 @@ def sell_asset():
 def get_transaction_history():
     """Retrieve user's transaction history"""
     try:
-        data = request.json
-        username = data.get('username')
+        data = request.json  # Get JSON data from the request
+        username = data.get('username')  # Extract username
 
         with sqlite3.connect(DATABASE_PATH) as conn:
             cursor = conn.cursor()
+            # Query to fetch the last 50 transactions for the user
             cursor.execute(""" 
                 SELECT transaction_type, amount, asset_name, timestamp 
                 FROM transactions 
@@ -576,65 +632,93 @@ def get_transaction_history():
                 LIMIT 50
             """, (username,))
             
-            transactions = cursor.fetchall()
+            transactions = cursor.fetchall()  # Fetch all transaction records
+            # Create a list of transactions with relevant details
             transaction_history = [
                 {
-                    "type": transaction[0],
-                    "amount": transaction[1],
-                    "asset": transaction[2],
-                    "timestamp": transaction[3]
+                    "type": transaction[0],  # Transaction type
+                    "amount": transaction[1],  # Transaction amount
+                    "asset": transaction[2],  # Asset involved in transaction
+                    "timestamp": transaction[3]  # Transaction timestamp
                 } for transaction in transactions
             ]
 
+        # Return JSON response with transaction history and total count
         return jsonify({
             "transaction_history": transaction_history,
             "total_transactions": len(transaction_history)
         }), 200
 
     except Exception as e:
+        # Handle any exceptions and return error message
         return jsonify({"error": str(e)}), 500
 
 @app.route('/historical_prices/<asset_name>', methods=['GET'])
 def get_historical_prices(asset_name):
     """Retrieve historical prices for a specific asset"""
     try:
+        # Connect to the database
         with sqlite3.connect(DATABASE_PATH) as conn:
+            # Create a database cursor
             cursor = conn.cursor()
+
+            # Query to fetch the historical prices for the given asset
+            # Sort the data by timestamp in ascending order
             cursor.execute("SELECT price, timestamp FROM historical_prices WHERE asset_name = ? ORDER BY timestamp ASC", (asset_name,))
+
+            # Fetch all the historical price records
             historical_data = cursor.fetchall()
 
+            # If no records are found, return a 404 error
             if not historical_data:
                 return jsonify({"message": "No historical data found for this asset."}), 404
             
             # Format the data for response
             prices = [{"price": row[0], "timestamp": row[1]} for row in historical_data]
         
+        # Return JSON response with the historical prices
         return jsonify({"asset_name": asset_name, "historical_prices": prices}), 200
     except Exception as e:
+        # Handle any exceptions and return error message
         return jsonify({"error": str(e)}), 500
 
 @app.route('/trend_analysis/<asset_name>', methods=['GET'])
 def analyze_trend(asset_name):
-    """Analyze the trend of a specific asset"""
+    """Analyze the trend of a specific asset
+
+    Fetches historical prices and calculates price changes between each
+    consecutive pair of prices.
+
+    Returns a JSON response with the asset name and a list of
+    dictionaries, each containing the timestamp and price change of a
+    particular data point in the trend analysis.
+
+    404 error if no historical data is found for the given asset.
+    """
     try:
         with sqlite3.connect(DATABASE_PATH) as conn:
             cursor = conn.cursor()
+            # Fetch historical prices sorted by timestamp in ascending order
             cursor.execute("SELECT price, timestamp FROM historical_prices WHERE asset_name = ? ORDER BY timestamp ASC", (asset_name,))
             historical_data = cursor.fetchall()
 
             if not historical_data:
+                # No historical data found
                 return jsonify({"message": "No historical data found for this asset."}), 404
-            
+
             # Calculate price changes
             prices = [row[0] for row in historical_data]
             trend = []
             for i in range(len(prices) - 1):
+                # Calculate price change between consecutive prices
                 change = prices[i + 1] - prices[i]
                 trend.append({"timestamp": historical_data[i + 1][1], "change": change})
 
             return jsonify({"asset_name": asset_name, "trend_analysis": trend}), 200
     except Exception as e:
+        # Handle any exceptions and return error message
         return jsonify({"error": str(e)}), 500
+
 
 # Main application initialization and startup
 if __name__ == "__main__":
