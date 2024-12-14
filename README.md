@@ -48,7 +48,7 @@ The required dependencies are listed in the `requirements.txt` file. Key depende
 ### 1. Clone the repository:
 
 ```bash
-git clone https://github.com/NAME0x0/CryptoTradingPlatform.git
+git clone https://github.com/NAME0x0/Crypto_Trading_Platform.git
 cd CryptoTradingPlatform
 ```
 
