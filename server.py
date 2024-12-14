@@ -26,7 +26,6 @@ CORS(app)  # Enable CORS for all routes
 
 # Configuration
 CRYPTO_API_URL = "https://api.coingecko.com/api/v3/coins/markets"
-API_KEY = "CG-Ew2XmhKD9kogA8bKSYrn8Hah"
 
 # Global variable to store last update time and market data
 last_update_time = 0
@@ -122,7 +121,6 @@ def update_market_data():
     try:
         headers = {
             "accept": "application/json",
-            "x-cg-demo-api-key": API_KEY
         }
         # Request market data from the API
         response = requests.get(CRYPTO_API_URL, headers=headers, params={"vs_currency": "usd"})
