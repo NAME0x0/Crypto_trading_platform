@@ -108,111 +108,73 @@ class CryptoTradingGUI(QMainWindow):
         # Global styles for main window, widgets, labels, and text inputs
         self.setStyleSheet(f"""
             QMainWindow {{
-                # Dark background
                 background-color: {BACKGROUND_DARKEST};
-                # Light text color
                 color: {TEXT_PRIMARY};
-                # Use the primary font
                 font-family: '{FONT_PRIMARY}', sans-serif;
             }}
         
             QWidget {{
-                # Darker background
                 background-color: {BACKGROUND_DARK};
-                # Same light text color
                 color: {TEXT_PRIMARY};
-                # Same primary font
                 font-family: '{FONT_PRIMARY}', sans-serif;
             }}
         
             QLabel {{
-                # Same light text color
                 color: {TEXT_PRIMARY};
-                # Same primary font
                 font-family: '{FONT_PRIMARY}', sans-serif;
             }}
         
             QLineEdit {{
-                # Lighter background
                 background-color: {BACKGROUND_MEDIUM};
-                # Same light text color
                 color: {TEXT_PRIMARY};
-                # Border and rounded corners
                 border: 1px solid {BACKGROUND_LIGHT};
                 border-radius: 6px;
-                # Padding for text input
                 padding: 10px;
-                # Same primary font
                 font-family: '{FONT_PRIMARY}', sans-serif;
-                # Same font size as labels
                 font-size: 14px;
             }}
         
             QTableWidget {{
-                # Dark background
                 background-color: {BACKGROUND_DARKEST};
-                # Same light text color
                 color: {TEXT_PRIMARY};
-                # Same primary font
                 font-family: '{FONT_PRIMARY}', sans-serif;
-                # Grid lines between rows
                 gridline-color: {BACKGROUND_MEDIUM};
-                # No border
                 border: none;
             }}
         
-            # Styles for odd and even rows
             QTableWidget::item:nth-child(odd) {{
-                # Lighter background for odd rows
-                background-color: {BACKGROUND_MEDIUM};  /* Color for odd rows */
+                background-color: {BACKGROUND_MEDIUM};
             }}
         
             QTableWidget::item:nth-child(even) {{
-                # Lighter background for even rows
-                background-color: {BACKGROUND_LIGHT};  /* Color for even rows */
+                background-color: {BACKGROUND_LIGHT};
             }}
 
             QTableWidget::item {{
-                # Same light text color
                 color: {TEXT_PRIMARY};
-                # Padding for table items
                 padding: 8px;
-                # Bottom border for each row
                 border-bottom: 1px solid {BACKGROUND_MEDIUM};
-                # Lighter background for each item
                 background-color: {BACKGROUND_MEDIUM};
             }}
         
             QHeaderView::section {{
-                # Lighter background for header
                 background-color: {BACKGROUND_MEDIUM};
-                # Accent color for header text
                 color: {PRIMARY_ACCENT};
-                # Padding for header text
                 padding: 10px;
-                # No border
                 border: none;
-                # Bold font
                 font-weight: bold;
-                # Same primary font
                 font-family: '{FONT_PRIMARY}', sans-serif;
             }}
         
             QComboBox {{
-                # Lighter background for combo box
                 background-color: {BACKGROUND_MEDIUM};
-                # Same light text color
                 color: {TEXT_PRIMARY};
-                # Rounded corners
                 border-radius: 6px;
-                # Padding for combo box
                 padding: 10px;
-                # Same primary font
                 font-family: '{FONT_PRIMARY}', sans-serif;
             }}
         
             QComboBox::drop-down {{
-                # Position and style for the drop-down arrow
                 subcontrol-origin: padding;
                 subcontrol-position: top right;
                 width: 40px;
@@ -222,7 +184,6 @@ class CryptoTradingGUI(QMainWindow):
             }}
         
             QScrollArea {{
-                # No border
                 border: none;
             }}
         """)
@@ -238,9 +199,7 @@ class CryptoTradingGUI(QMainWindow):
         # Style the sidebar
         nav_widget.setStyleSheet(f"""
             QWidget {{
-                # Dark background
                 background-color: {BACKGROUND_DARK};
-                # Border on the right
                 border-right: 1px solid {BACKGROUND_MEDIUM};
             }}
         """)
@@ -249,17 +208,11 @@ class CryptoTradingGUI(QMainWindow):
         logo_label = QLabel("CryptoVault")
         # Style the logo
         logo_label.setStyleSheet(f"""
-            # Large font size
             font-size: 28px;
-            # Bold font
             font-weight: bold;
-            # Accent color
             color: {PRIMARY_ACCENT};
-            # Padding for the logo
             padding: 20px;
-            # Center the logo
             text-align: center;
-            # Same primary font
             font-family: '{FONT_PRIMARY}', sans-serif;
         """)
         # Add the logo to the sidebar
@@ -785,23 +738,27 @@ class CryptoTradingGUI(QMainWindow):
     def display_asset_trend(self):
         """Fetch and display the trend for the selected asset.
 
-        This method is connected to the 'currentIndexChanged' signal of the
-        asset combo box on the asset trend page. When the selected asset
-        changes, this method is called to fetch and display the trend data
-        for the selected asset.
+        Connected to the 'currentIndexChanged' signal of the asset combo box
+        on the asset trend page. When the selected asset changes, this method
+        is called to fetch and display the trend data for the selected asset.
 
-        If the asset name is not empty, it makes a GET request to the server
-        to fetch the trend data. If the request is successful, it displays
-        the trend data in the label on the asset trend page. Otherwise, it
-        displays an error message.
+        If the asset name is not empty, makes a GET request to the server to
+        fetch the trend data. If the request is successful, displays the trend
+        data in the label on the asset trend page. Otherwise, displays an error
+        message.
         """
+        # Get the currently selected asset name
         asset_name = self.trend_asset_combo.currentText()
         if asset_name:
+            # Make a GET request to the server to fetch the trend data
             response = self._make_request(f'/historical_prices/{asset_name}', method='get')
             if response:
+                # Get the trend data from the response
                 trend_data = response.get('trend_data', 'No data available.')
+                # Display the trend data in the label on the asset trend page
                 self.trend_display.setText(trend_data)
             else:
+                # Display an error message if the request is not successful
                 self.trend_display.setText("Error fetching trend data.")
 
     def _make_request(self, endpoint, method='get', data=None):
@@ -816,20 +773,28 @@ class CryptoTradingGUI(QMainWindow):
             dict: The JSON response from the server if the request is successful
         """
         try:
+            # Construct full URL
             full_url = f"{self.base_url}{endpoint}"
+            # Determine HTTP method
             if method.lower() == 'get':
+                # Send GET request
                 response = requests.get(full_url)
             elif method.lower() == 'post':
+                # Send POST request with JSON data
                 response = requests.post(full_url, json=data)
             else:
+                # Raise error for unsupported methods
                 raise ValueError(f"Unsupported HTTP method: {method}")
             
+            # Check for HTTP errors
             response.raise_for_status()
+            # Return JSON response
             return response.json()
         except requests.exceptions.RequestException as e:
-            # If the request fails for any reason, show an error message
+            # Handle request exceptions
             self.show_error_message(f"Error making request: {e}")
             return None
+
 
 
     def show_error_message(self, message):
@@ -932,54 +897,65 @@ class CryptoTradingGUI(QMainWindow):
         This function creates a new account by making a POST request to the server
         with the username, password, and email.
         """
+        # Retrieve username and password from input fields
         username = self.username_input.text()
         password = self.password_input.text()
     
+        # Create a dialog for email input
         dialog = QDialog(self)
         dialog.setWindowTitle("Create Account")
         layout = QFormLayout()
     
+        # Email input field
         email_input = QLineEdit()
         layout.addRow("Email:", email_input)
     
+        # Dialog buttons for OK and Cancel actions
         buttons = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
         )
+        buttons.accepted.connect(dialog.accept)  # Connect OK button to accept dialog
+        buttons.rejected.connect(dialog.reject)  # Connect Cancel button to reject dialog
         buttons.accepted.connect(dialog.accept)
         buttons.rejected.connect(dialog.reject)
         layout.addRow(buttons)
     
+        # Set the dialog layout
         dialog.setLayout(layout)
     
+        # Execute dialog and proceed if accepted
         if dialog.exec() == QDialog.DialogCode.Accepted:
+            # Retrieve email from input field
             email = email_input.text()
+            # Prepare data payload for account creation request
             data = {
                 'username': username,
                 'password': password,
                 'email': email
             }
         
+            # Send account creation request to server
             response = self._make_request('/create_account', method='post', data=data)
             if response:
+                # Display success message if account creation is successful
                 self.show_success_message(response.get('message', 'Account created successfully!'))
 
     def check_balance(self):
-        """Fetch and display user balance after login.
-
-        This function is called after a successful login or when the user switches
-        to the balance page. It fetches the user balance and updates the balance
-        label on the balance page.
-        """
+        """Fetch and display user balance after login."""
+        
+        # Check if the user is logged in
         if not self.current_user:
             self.show_error_message("Please login first.")
             return
-    
+        
+        # Make a request to fetch the user's account balance
         response = self._make_request(f'/account/{self.current_user}')
         if response:
+            # Retrieve and display the balance
             balance = response.get('balance', 0)
             self.balance_label.setText(f"Balance: ${balance:.2f}")
-        
-            # Add welcome message
+            
+            # Display a welcome message
             self.welcome_label.setText(f"Welcome back, {self.current_user}!")
 
     def deposit_funds(self):
@@ -991,6 +967,7 @@ class CryptoTradingGUI(QMainWindow):
         updates the balance label on the balance page.
         """
         if not self.current_user:
+            # Check if user is logged in
             self.show_error_message("Please login first.")
             return
     
@@ -998,9 +975,11 @@ class CryptoTradingGUI(QMainWindow):
         dialog.setWindowTitle("Deposit Funds")
         layout = QFormLayout()
     
+        # Input field for deposit amount
         amount_input = QLineEdit()
         layout.addRow("Amount:", amount_input)
     
+        # Dialog buttons for OK and Cancel actions
         buttons = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
         )
@@ -1012,17 +991,21 @@ class CryptoTradingGUI(QMainWindow):
     
         if dialog.exec() == QDialog.DialogCode.Accepted:
             try:
+                # Convert user input to float
                 amount = float(amount_input.text())
                 data = {
                     'username': self.current_user,
                     'amount': amount
                 }
             
+                # Send deposit request to server
                 response = self._make_request('/deposit', method='post', data=data)
                 if response:
+                    # Show success message and refresh balance
                     self.show_success_message(response.get('message', 'Deposit successful!'))
                     self.check_balance()
             except ValueError:
+                # Handle invalid input
                 self.show_error_message("Invalid amount entered.")
 
 
@@ -1034,17 +1017,21 @@ class CryptoTradingGUI(QMainWindow):
         amount. If the request is successful, it shows a success message and
         updates the balance label on the balance page.
         """
+        # Check if user is logged in
         if not self.current_user:
             self.show_error_message("Please login first.")
             return
     
+        # Create dialog to get withdrawal amount
         dialog = QDialog(self)
         dialog.setWindowTitle("Withdraw Funds")
         layout = QFormLayout()
     
+        # Get withdrawal amount from user
         amount_input = QLineEdit()
         layout.addRow("Amount:", amount_input)
     
+        # Add buttons to dialog
         buttons = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
         )
@@ -1052,21 +1039,27 @@ class CryptoTradingGUI(QMainWindow):
         buttons.rejected.connect(dialog.reject)
         layout.addRow(buttons)
     
+        # Set layout for dialog
         dialog.setLayout(layout)
     
+        # Execute dialog and check if user accepted
         if dialog.exec() == QDialog.DialogCode.Accepted:
             try:
+                # Convert input to float
                 amount = float(amount_input.text())
                 data = {
                     'username': self.current_user,
                     'amount': amount
                 }
             
+                # Make POST request to server
                 response = self._make_request('/withdraw', method='post', data=data)
                 if response:
+                    # Show success message and update balance label
                     self.show_success_message(response.get('message', 'Withdrawal successful!'))
                     self.check_balance()
             except ValueError:
+                # Show error message if input is invalid
                 self.show_error_message("Invalid amount entered.")
     
     def view_portfolio(self):
@@ -1100,18 +1093,22 @@ class CryptoTradingGUI(QMainWindow):
 
     def check_balance(self):
         """Fetch and display user balance
+        
         This function sends a GET request to the server to fetch the user's
         current balance. If the request is successful, it updates the balance
         label on the balance page.
-
+        
         If the user is not logged in, it shows an error message.
         """
         if not self.current_user:
+            # User is not logged in, show error message
             self.show_error_message("Please login first.")
             return
-    
+        
+        # Send request to server to fetch user balance
         response = self._make_request(f'/account/{self.current_user}')
         if response:
+            # Update balance label on balance page
             balance = response.get('balance', 0)
             self.balance_label.setText(f"Balance: ${balance:.2f}")
 
@@ -1126,14 +1123,17 @@ class CryptoTradingGUI(QMainWindow):
         if not self.current_user:
             self.show_error_message("Please login first.")
             return
-    
+
+        # Create dialog to get deposit amount from user
         dialog = QDialog(self)
         dialog.setWindowTitle("Deposit Funds")
         layout = QFormLayout()
     
+        # Input field for deposit amount
         amount_input = QLineEdit()
         layout.addRow("Amount:", amount_input)
     
+        # Dialog buttons for OK and Cancel actions
         buttons = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
         )
@@ -1143,20 +1143,26 @@ class CryptoTradingGUI(QMainWindow):
     
         dialog.setLayout(layout)
     
+        # Execute dialog and process deposit if accepted
         if dialog.exec() == QDialog.DialogCode.Accepted:
             try:
+                # Convert user input to float
                 amount = float(amount_input.text())
                 data = {
                     'username': self.current_user,
                     'amount': amount
                 }
             
+                # Make POST request to server
                 response = self._make_request('/deposit', method='post', data=data)
                 if response:
+                    # Show success message and update balance label
                     self.show_success_message(response.get('message', 'Deposit successful!'))
                     self.check_balance()
             except ValueError:
+                # Show error message if input is invalid
                 self.show_error_message("Invalid amount entered.")
+
 
     def withdraw_funds(self):
         """Handle fund withdrawal"""
@@ -1433,23 +1439,14 @@ class CryptoTradingGUI(QMainWindow):
         self.stacked_widget.setCurrentWidget(self.login_page)  # Navigate to login page
 
 def main():
-    """
-    Main application entry point.
-
-    Initialize the application, create an instance of the main window, and start the application event loop.
-    """
+    """Main application entry point."""
+    # Create application instance
     app = QApplication(sys.argv)
-    """
-    Create an instance of the main window.
-    """
+    # Create main window instance
     window = CryptoTradingGUI()
-    """
-    Show the main window.
-    """
+    # Show main window
     window.show()
-    """
-    Start the application event loop.
-    """
+    # Start application event loop
     sys.exit(app.exec())
 
 if __name__ == "__main__":
