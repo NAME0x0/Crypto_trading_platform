@@ -1,4 +1,3 @@
----
 # Crypto Trading Platform
 
 ## Description
@@ -30,7 +29,7 @@ To run this project locally, ensure you have the following installed:
 
 To install the required dependencies, run the following command:
 
-```bash
+```
 pip install -r requirements.txt
 ```
 
@@ -43,25 +42,6 @@ The required dependencies are listed in the `requirements.txt` file. Key depende
 - **PyQt6**: GUI framework for the client-side interface.
 - **matplotlib**: For real-time market charts and data visualization.
 - **SQLAlchemy**: ORM for database handling.
-
-## Project Structure
-
-The project is organized as follows:
-
-```
-/CryptoTradingPlatform
-    ├── /client
-        ├── client_CLI.py     # Command-line interface client
-        ├── client_GUI.py     # Graphical user interface client
-    ├── /server
-        ├── server.py         # Flask server for API handling
-    ├── /assets
-        ├── assets.py         # Data handling and asset management
-    ├── /models
-        ├── models.py         # Database models (for SQLAlchemy)
-    ├── requirements.txt      # Project dependencies
-    ├── README.md             # Project description and setup instructions
-```
 
 ## Setup & Running the Project
 
